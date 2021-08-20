@@ -1,0 +1,12 @@
+{
+    "name": "discord-sleeper-events",
+    "version": "0.0.1",
+    "description": "Discord bot for Sleeper",
+    "main": "index.js",
+    "author": "Christopher Campbell",
+    "license": "MIT",
+    "dependencies": {
+        "discord.js": "^12.5.1",
+        "dotenv": "^8.2.0"
+    }
+}
