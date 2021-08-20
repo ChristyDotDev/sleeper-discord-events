@@ -1,6 +1,9 @@
 const Discord = require('discord.js');
 const axios = require('axios');
+const createClient = require('@supabase/supabase-js').createClient
 require('dotenv').config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
 
 const client = new Discord.Client();
 
@@ -19,6 +22,16 @@ client.on('message', (msg) => {
     }
     const league_id = parts[1];
     axios.get(`https://api.sleeper.app/v1/league/${league_id}`).then(res => {
+      console.log(msg.channel)
+      supabase.from('sleeper-subs')
+        .insert([
+          { channel: msg.channel.id, league_id: league_id }
+        ]).then(dbRes => {
+          console.log(dbRes);
+        }).catch(err => {
+          msg.channel.send(`Couldn't save subscription to Sleeper league ${league_id}`);
+          return;
+        });
       msg.channel.send(`Subscribe to league ${res.data.name}`);
     }).catch(err => {
       msg.channel.send(`Couldn't subscribe to Sleeper league ${league_id}`);
