@@ -11,15 +11,13 @@ const playersResponse = axios.get("https://api.sleeper.app/v1/players/nfl").then
 client.login(process.env.BOT_TOKEN);
 client.on('ready', async () => {
     console.log('The Bot is ready!');
-    setInterval(function(){ // repeat this every 5 minutes
+    setInterval(function(){ // repeat this every 10 minutes
         checkTransactions();
-    }, 5000 )
+    }, 1000 * 60 * 10 )
 });
 
 client.on('message', async (msg) => {
   if (msg.content === '!ping') {
-    console.log(msg.channel.id);
-    console.log(msg.guild.id);
     msg.channel.send("Pong");
   } else if (msg.content.startsWith("!sleeper-subscribe")){
     const parts = msg.content.split(" ");
@@ -40,10 +38,9 @@ client.on('message', async (msg) => {
 });
 
 async function checkTransactions() {
-    //TODO - send the latest transactions to the webhook
     const nflInfo = await axios.get('https://api.sleeper.app/v1/state/nfl')
     const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 1;
-    const epochMillis = Math.round(Date.now())
+    const epochMillis = Math.round(Date.now());
     
     const subs = await supabase.from('sleeper-subs')
         .select();
@@ -51,7 +48,7 @@ async function checkTransactions() {
         const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
-
+        console.log(`Checking subscription for league: ${sub.league_id}`);
         const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
         const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
         
@@ -68,30 +65,34 @@ async function checkTransactions() {
                 channel.send(pickupMessage);          
             }
         })
-        //TODO - update latest txn time in DB here
+        const updatedSub = await updateSub(sub, epochMillis);
+        console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
     });
 };
 
+async function updateSub(sub, epochMillis){
+    return await supabase.from('sleeper-subs')
+        .update({latest: epochMillis})
+        .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id});
+}
+
 function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
-    const trade = {}
-    const stringParts = ["__**Free Agent Pickup**__"];
-    for (const [playerId, rosterId] of Object.entries(txn.adds)) {
-        const username = getUsernameForRosterId(leagueRosters, leagueUsers, rosterId);
-        if (!trade[username]){
-            trade[username] = []
+    const pickups = []
+    const drops = []
+    const txn_type = txn.type =='waiver' ? 'Waiver Claim' : 'Free Agent Move'
+    const username = getUsernameForRosterId(leagueRosters, leagueUsers, txn.roster_ids[0]);
+    const stringParts = [`__**${txn_type}**__\n**${username}**`];
+    if(txn.adds){
+        for (const [playerId, rosterId] of Object.entries(txn.adds)) {
+            pickups.push(`+ ${players[playerId].full_name}`);
         }
-        trade[username].push(players[playerId].full_name);
-    }   
-    txn.draft_picks.forEach(pick => {
-        const username = getUsernameForRosterId(leagueRosters, leagueUsers, pick.owner_id);
-        if (!trade[username]){
-            trade[username] = []
+        stringParts.push(pickups.join('\n'));
+    }
+    if(txn.drops){
+        for (const [playerId, rosterId] of Object.entries(txn.drops)) {
+            drops.push(`- ${players[playerId].full_name}`);
         }
-        trade[username].push(`${pick.season} ${pick.round}`);
-    })
-    for (const [username, tradeParts] of Object.entries(trade)) {
-        stringParts.push(`**${username}** adds`);
-        stringParts.push(tradeParts.join('\n'));
+        stringParts.push(drops.join('\n'));
     }
     return stringParts.join("\n");
 }
@@ -103,18 +104,18 @@ function buildTradeMessage(players, leagueRosters, leagueUsers, txn){
         if (!trade[username]){
             trade[username] = []
         }
-        trade[username].push(players[playerId].full_name);
+        trade[username].push(`+ ${players[playerId].full_name}`);
     }   
     txn.draft_picks.forEach(pick => {
         const username = getUsernameForRosterId(leagueRosters, leagueUsers, pick.owner_id);
         if (!trade[username]){
             trade[username] = []
         }
-        trade[username].push(`${pick.season} ${pick.round}`);
+        trade[username].push(`+ ${pick.season} ${pick.round}`);
     })
     const stringParts = ["__**Trade**__"];
     for (const [username, tradeParts] of Object.entries(trade)) {
-        stringParts.push(`**${username}** adds`);
+        stringParts.push(`**${username}**`);
         stringParts.push(tradeParts.join('\n'));
     }
     return stringParts.join("\n");
@@ -133,7 +134,7 @@ function getUsernameForRosterId( rosters, users, rosterId){
 async function saveSubscription(guildId, channelId, leagueId) {
     const exists = await subscriptionExists(guildId, channelId, leagueId);
     if (!exists) {
-        const epochMillis = Math.round(Date.now())
+        const epochMillis = Math.round(Date.now());
         supabase.from('sleeper-subs')
             .insert([
                 { guild: guildId, channel: channelId, league_id: leagueId, latest: epochMillis }
