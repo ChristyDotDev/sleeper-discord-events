@@ -5,6 +5,9 @@
     "main": "index.js",
     "author": "Christopher Campbell",
     "license": "MIT",
+    "scripts": {
+        "start": "node index.js"
+    },
     "dependencies": {
         "axios": "^0.21.1",
         "dotenv": "^8.2.0",
