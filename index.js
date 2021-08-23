@@ -13,7 +13,7 @@ client.on('ready', async () => {
     console.log('The Bot is ready!');
     setInterval(function(){ // repeat this every 10 minutes
         checkTransactions();
-    }, 1000 * 60 * 10 )
+    }, 1000 * 60 * 1 )
 });
 
 client.on('message', async (msg) => {
