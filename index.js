@@ -42,7 +42,7 @@ async function checkTransactions() {
     const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 1;
     const epochMillis = Math.round(Date.now());
     
-    const subs = await supabase.from('sleeper-subs')
+    const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
     subs.data.forEach(async sub => {
         const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
@@ -71,7 +71,7 @@ async function checkTransactions() {
 };
 
 async function updateSub(sub, epochMillis){
-    return await supabase.from('sleeper-subs')
+    return await supabase.from(process.env.SUBS_TABLE_NAME)
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id});
 }
@@ -135,7 +135,7 @@ async function saveSubscription(guildId, channelId, leagueId) {
     const exists = await subscriptionExists(guildId, channelId, leagueId);
     if (!exists) {
         const epochMillis = Math.round(Date.now());
-        supabase.from('sleeper-subs')
+        supabase.from(process.env.SUBS_TABLE_NAME)
             .insert([
                 { guild: guildId, channel: channelId, league_id: leagueId, latest: epochMillis }
             ]).then(dbRes => {
@@ -148,7 +148,7 @@ async function saveSubscription(guildId, channelId, leagueId) {
 };
 
 async function subscriptionExists(guildId, channelId, leagueId) {
-    return await supabase.from('sleeper-subs')
+    return await supabase.from(process.env.SUBS_TABLE_NAME)
         .select()
         .eq('guild', guildId)
         .eq('channel', channelId)
