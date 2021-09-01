@@ -11,9 +11,9 @@ const playersResponse = axios.get("https://api.sleeper.app/v1/players/nfl").then
 client.login(process.env.BOT_TOKEN);
 client.on('ready', async () => {
     console.log('The Bot is ready!');
-    setInterval(function(){ // repeat this every 10 minutes
+    setInterval(function(){ // repeat this every 2 minutes
         checkTransactions();
-    }, 1000 * 60 * 10 )
+    }, 1000 * 60 * 2 )
 });
 
 client.on('message', async (msg) => {
