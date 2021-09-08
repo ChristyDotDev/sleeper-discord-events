@@ -18,10 +18,11 @@ Once the bot is added, to subscribe to a league on Sleeper grab the league ID fr
 
 Where 111111 is your league ID. You should get a message from the bot in response saying something like "Subscribed to league YourleagueName"
 
+The bot runs on a schedule so notifications will not be immediate but will appear when it's doing it's scheduled run.
+
 ### Unsubscribing from a league
 
-TODO - If you want to stop seeing the notifications in the meantime, remove the bot from your server
-
+TODO - If you want to stop seeing the notifications in the meantime, remove the bot from your server. I swear I'll add a !sleeper-unsubscribe command soon :)
 
 ## Notifications format
 
