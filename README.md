@@ -35,3 +35,7 @@ I'm hoping to prettify them a bit later
 ## Hosting Costs
 
 I'm not planning to charge for this bot but if you enjoy it, any donations towards hosting fees are always appreciated. [I've set up a Kofi](https://ko-fi.com/christyc92).
+
+## Bot limits
+
+I've not implemented any limits on how many subscriptions you can add per server so please be sensible. Adding a "one league per server" rule would be quite easy, but I don't really want to have to
