@@ -2,6 +2,24 @@
 
 This bot can be added to your Discord server and allows you to subscribe to transactions in your Sleeper fantasy football league (at the time of writing it handles trades/adds and drops). 
 
+## Notifications format
+
+For now, the notification is quite a simple text message. An Example of a drop message:
+
+<img width="412" alt="Screenshot 2021-09-08 at 21 49 33" src="https://user-images.githubusercontent.com/6845036/132583626-98d955cd-600d-49fd-ab08-c3fcf2bda0fe.png">
+
+I'm hoping to prettify them a bit later
+
+## Hosting Costs
+
+I'm not planning to charge for this bot but if you enjoy it, any donations towards hosting fees are always appreciated. [I've set up a Kofi](https://ko-fi.com/christyc92).
+
+## Bot limits
+
+I've not implemented any limits on how many subscriptions you can add per server so please be sensible. Adding a "one league per server" rule would be quite easy, but I don't really want to have to
+
+## Adding your league subscription
+
 ### Adding the bot to your server
 
 Adding the bot is simple. Click the link below to add it to your Discord server
@@ -23,19 +41,3 @@ The bot runs on a schedule so notifications will not be immediate but will appea
 ### Unsubscribing from a league
 
 TODO - If you want to stop seeing the notifications in the meantime, remove the bot from your server. I swear I'll add a !sleeper-unsubscribe command soon :)
-
-## Notifications format
-
-For now, the notification is quite a simple text message. An Example of a drop message:
-
-<img width="412" alt="Screenshot 2021-09-08 at 21 49 33" src="https://user-images.githubusercontent.com/6845036/132583626-98d955cd-600d-49fd-ab08-c3fcf2bda0fe.png">
-
-I'm hoping to prettify them a bit later
-
-## Hosting Costs
-
-I'm not planning to charge for this bot but if you enjoy it, any donations towards hosting fees are always appreciated. [I've set up a Kofi](https://ko-fi.com/christyc92).
-
-## Bot limits
-
-I've not implemented any limits on how many subscriptions you can add per server so please be sensible. Adding a "one league per server" rule would be quite easy, but I don't really want to have to
