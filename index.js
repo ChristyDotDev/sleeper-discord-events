@@ -93,13 +93,15 @@ function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
     const stringParts = [`__**${txn_type}**__\n**${username}**`];
     if(txn.adds){
         for (const [playerId, rosterId] of Object.entries(txn.adds)) {
-            pickups.push(`+ ${players[playerId].full_name}`);
+            const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
+            pickups.push(`+ ${playerName}`);
         }
         stringParts.push(pickups.join('\n'));
     }
     if(txn.drops){
         for (const [playerId, rosterId] of Object.entries(txn.drops)) {
-            drops.push(`- ${players[playerId].full_name}`);
+            const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
+            drops.push(`- ${playerName}`);
         }
         stringParts.push(drops.join('\n'));
     }
@@ -110,10 +112,11 @@ function buildTradeMessage(players, leagueRosters, leagueUsers, txn){
     const trade = {}
     for (const [playerId, rosterId] of Object.entries(txn.adds)) {
         const username = getUsernameForRosterId(leagueRosters, leagueUsers, rosterId);
+        const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
         if (!trade[username]){
             trade[username] = []
         }
-        trade[username].push(`+ ${players[playerId].full_name}`);
+        trade[username].push(`+ ${playerName}`);
     }   
     txn.draft_picks.forEach(pick => {
         const username = getUsernameForRosterId(leagueRosters, leagueUsers, pick.owner_id);
