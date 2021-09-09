@@ -73,7 +73,12 @@ async function checkTransactions() {
 async function updateSub(sub, epochMillis){
     return await supabase.from(process.env.SUBS_TABLE_NAME)
         .update({latest: epochMillis})
-        .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id});
+        .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
+        .then(r => {return r;})
+        .catch(err => {
+            console.log(err);
+            throw err
+        });
 }
 
 function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
