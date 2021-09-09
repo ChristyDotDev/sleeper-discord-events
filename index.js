@@ -48,12 +48,13 @@ async function checkTransactions() {
         const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
-        console.log(`Checking subscription for league: ${sub.league_id}`);
+        console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
         const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
         const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
         
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
         const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
+        console.log(`New Txns: ${newTxns}`)
         newTxns.forEach(async txn => {
             const players = await playersResponse
             if(txn.type=='trade'){
