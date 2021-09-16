@@ -40,4 +40,4 @@ The bot runs on a schedule so notifications will not be immediate but will appea
 
 ### Unsubscribing from a league
 
-TODO - If you want to stop seeing the notifications in the meantime, remove the bot from your server. I swear I'll add a !sleeper-unsubscribe command soon :)
+Running !sleeper-unsubscribe in a channel will remove any subscriptions associated with it and no notifications should be sent.
