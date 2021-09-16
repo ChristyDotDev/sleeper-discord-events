@@ -34,6 +34,9 @@ client.on('message', async (msg) => {
       msg.channel.send(`Couldn't subscribe to Sleeper league ${leagueId}`);
       return;
     });
+  } else if (msg.content == ("!sleeper-unsubscribe")){
+    removeSubscription(msg.channel.guild.id, msg.channel.id);
+    msg.channel.send(`Unsubscribed`);
   }
 });
 
@@ -145,6 +148,18 @@ async function saveSubscription(guildId, channelId, leagueId) {
                 return false;
             });
     }
+};
+
+async function removeSubscription(guildId, channelId) {
+    supabase.from(process.env.SUBS_TABLE_NAME)
+        .delete()
+        .match({ guild: guildId, channel: channelId })
+        .then(dbRes => {
+            return true;
+        }).catch(err => {
+            msg.channel.send(`Couldn't remove subscription to channel ${channelId} in guild ${guildId}`);
+            return false;
+        });
 };
 
 async function subscriptionExists(guildId, channelId, leagueId) {
