@@ -44,4 +44,4 @@ The bot runs on a schedule so notifications will not be immediate but will appea
 
 ### Unsubscribing from a league
 
-Running !sleeper-unsubscribe in a channel will remove any subscriptions associated with it and no notifications should be sent.
+Running `!sleeper-unsubscribe` in a channel will remove any subscriptions associated with it and no notifications should be sent.
