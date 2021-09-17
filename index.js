@@ -54,27 +54,27 @@ async function checkTransactions() {
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
     subs.data.forEach(async sub => {
-        const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
+        const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
         console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
-        const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
-        const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
-        
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
         const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
-        console.log(`New Txns: ${newTxns}`)
-        newTxns.forEach(async txn => {
-            const players = await playersResponse
-            if(txn.type=='trade'){
-                const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
-                channel.send(tradeMessage);          
-            }
-            if(txn.type=='waiver' || txn.type=='free_agent'){
-                const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
-                channel.send(pickupMessage);          
-            }
-        })
+        if(newTxns.length > 0){
+            const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
+            const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
+            newTxns.forEach(async txn => {
+                const players = await playersResponse
+                if(txn.type=='trade'){
+                    const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
+                    channel.send(tradeMessage);          
+                }
+                if(txn.type=='waiver' || txn.type=='free_agent'){
+                    const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
+                    channel.send(pickupMessage);          
+                }
+            })
+        }
         const updatedSub = await updateSub(sub, epochMillis);
         console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
     });
