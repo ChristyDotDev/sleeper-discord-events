@@ -25,8 +25,8 @@ client.on('message', async (msg) => {
       msg.channel.send("Usage: `!sleeper-subscribe 123` where 123 is the Sleeper league ID");
       return;
     }
-    console.log(channelSubscriptionExists(msg.channel.guild.id, msg.channel.id));
-    if(channelSubscriptionExists(msg.channel.guild.id, msg.channel.id) == true){
+    const exists = await channelSubscriptionExists(msg.channel.guild.id, msg.channel.id));
+    if(exists){
         msg.channel.send(`Already subscribed. Please run !sleeper-unsubscribe first if you want to change the league this channel is subscribed to`);
         return;
     }
