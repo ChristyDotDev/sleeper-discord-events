@@ -26,7 +26,7 @@ client.on('message', async (msg) => {
       return;
     }
 
-    if(channelSubscriptionExists(msg.channel.guild.id, msg.channel.id)){
+    if(subscriptionExists(msg.channel.guild.id, msg.channel.id, leagueId)){
         msg.channel.send(`Already subscribed. Please run !sleeper-unsubscribe first if you want to change the league this channel is subscribed to`);
         return;
     }
