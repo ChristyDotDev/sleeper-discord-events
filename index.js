@@ -25,12 +25,11 @@ client.on('message', async (msg) => {
       msg.channel.send("Usage: `!sleeper-subscribe 123` where 123 is the Sleeper league ID");
       return;
     }
-    const leagueId = parts[1];
-
-    if(subscriptionExists(msg.channel.guild.id, msg.channel.id, leagueId)){
+    if(channelSubscriptionExists(msg.channel.guild.id, msg.channel.id) == true){
         msg.channel.send(`Already subscribed. Please run !sleeper-unsubscribe first if you want to change the league this channel is subscribed to`);
         return;
     }
+    const leagueId = parts[1];
 
     axios.get(`https://api.sleeper.app/v1/league/${leagueId}`).then( async res => {
       saveSubscription(msg.channel.guild.id, msg.channel.id, leagueId);
@@ -187,7 +186,6 @@ async function subscriptionExists(guildId, channelId, leagueId) {
         .eq('channel', channelId)
         .eq('league_id', leagueId)
         .then(dbRes => {
-            console.log(dbRes.data);
             return dbRes.data.length > 0;
         }).catch(err => {
             return false;
