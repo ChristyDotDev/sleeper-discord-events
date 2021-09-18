@@ -25,13 +25,13 @@ client.on('message', async (msg) => {
       msg.channel.send("Usage: `!sleeper-subscribe 123` where 123 is the Sleeper league ID");
       return;
     }
+    const leagueId = parts[1];
 
     if(subscriptionExists(msg.channel.guild.id, msg.channel.id, leagueId)){
         msg.channel.send(`Already subscribed. Please run !sleeper-unsubscribe first if you want to change the league this channel is subscribed to`);
         return;
     }
 
-    const leagueId = parts[1];
     axios.get(`https://api.sleeper.app/v1/league/${leagueId}`).then( async res => {
       saveSubscription(msg.channel.guild.id, msg.channel.id, leagueId);
       msg.channel.send(`Subscribed to league ${res.data.name}`);
