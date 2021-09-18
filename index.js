@@ -187,6 +187,7 @@ async function subscriptionExists(guildId, channelId, leagueId) {
         .eq('channel', channelId)
         .eq('league_id', leagueId)
         .then(dbRes => {
+            console.log(dbRes.data);
             return dbRes.data.length > 0;
         }).catch(err => {
             return false;
