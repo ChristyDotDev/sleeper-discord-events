@@ -67,11 +67,11 @@ async function checkTransactions() {
                 const players = await playersResponse
                 if(txn.type=='trade'){
                     const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
-                    channel.send(tradeMessage);          
+                    await channel.send(tradeMessage);          
                 }
                 if(txn.type=='waiver' || txn.type=='free_agent'){
                     const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
-                    channel.send(pickupMessage);          
+                    await channel.send(pickupMessage);          
                 }
             })
         }
