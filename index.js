@@ -59,6 +59,10 @@ async function checkTransactions() {
             c.id == sub.channel);
         console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
+        if(nflWeek > 1){
+            const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
+            txns.data = txns.data.concat(prevWeekTxns.data);
+        }
         const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
         if(newTxns.length > 0){
             const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
