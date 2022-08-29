@@ -13,6 +13,7 @@ client.on('ready', async () => {
     console.log('The Bot is ready!');
     setInterval(function(){ // repeat this every 2 minutes
         checkTransactions();
+        checkDraftPicks();
     }, 1000 * 60 * 2 )
 });
 
@@ -43,6 +44,35 @@ client.on('message', async (msg) => {
   } else if (msg.content == ("!sleeper-unsubscribe")){
     removeSubscription(msg.channel.guild.id, msg.channel.id);
     msg.channel.send(`Unsubscribed`);
+  } else if (msg.content.startsWith("!draft-subscribe")){
+    const parts = msg.content.split(" ");
+    if(parts.length != 2){
+      msg.channel.send("Usage: `!draft-subscribe 123` where 123 is the Sleeper Draft ID");
+      return;
+    }
+    //TODO -validations
+    /*
+    const exists = await channelSubscriptionExists(msg.channel.guild.id, msg.channel.id);
+    if(exists){
+        msg.channel.send(`Already subscribed. Please run !draft-unsubscribe first if you want to change the league this channel is subscribed to`);
+        return;
+    }
+    */
+    const draftId = parts[1];
+
+    axios.get(`https://api.sleeper.app/v1/draft//${draftId}/picks`).then( async res => {
+      let latestPlayer = 0
+      if (res.data.length > 0){
+        latestPlayer = res.data[res.data.length-1].player_id
+      }
+      console.log(latestPlayer)
+      saveDraftSubscription(msg.channel.guild.id, msg.channel.id, draftId, res.data.length);
+      msg.channel.send(`Subscribed to draft ${draftId}`);
+    }).catch(err => {
+      console.log(err);
+      msg.channel.send(`Couldn't subscribe to Sleeper Draft ${draftId}`);
+      return;
+    });
   }
 });
 
@@ -84,10 +114,45 @@ async function checkTransactions() {
     });
 };
 
+async function checkDraftPicks() {
+    const epochMillis = Math.round(Date.now());
+    
+    const subs = await supabase.from(process.env.DRAFT_TABLE_NAME)
+        .select();
+    subs.data.forEach(async sub => {
+        const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
+            c.type == 'text' &&
+            c.id == sub.channel);
+        //TODO - get team/player names
+        const picks = await axios.get(`https://api.sleeper.app/v1/draft/${sub.draft_id}/picks`)
+        const newPicks = picks.data.slice(sub.latest)
+        console.log(newPicks)
+        newPicks.forEach(async pick => {
+            const pickMessage = pick.round + "." + draftSlot(pick) + ": " +pick.metadata.first_name + " " + pick.metadata.last_name;
+            await channel.send(pickMessage); 
+            await updateDraftSub(sub, pick.pick_no)
+        });
+    });
+};
+
 async function updateSub(sub, epochMillis){
     return await supabase.from(process.env.SUBS_TABLE_NAME)
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
+        .then(r => {
+            console.log(r);
+            return r;
+        })
+        .catch(err => {
+            console.log(err);
+            throw err;
+        });
+}
+
+async function updateDraftSub(sub, latest){
+    return await supabase.from(process.env.DRAFT_TABLE_NAME)
+        .update({latest: latest})
+        .match({guild: sub.guild, channel: sub.channel, draft_id: sub.draft_id})
         .then(r => {
             console.log(r);
             return r;
@@ -172,6 +237,19 @@ async function saveSubscription(guildId, channelId, leagueId) {
     }
 };
 
+async function saveDraftSubscription(guildId, channelId, draftId, latestPick) {
+    supabase.from(process.env.DRAFT_TABLE_NAME)
+        .upsert([
+            { guild: guildId, channel: channelId, draft_id: draftId, latest: latestPick }
+        ]).then(dbRes => {
+            console.log(dbRes)
+            return true;
+        }).catch(err => {
+            msg.channel.send(`Couldn't save subscription to Sleeper league ${leagueId}`);
+            return false;
+        });
+};
+
 async function removeSubscription(guildId, channelId) {
     supabase.from(process.env.SUBS_TABLE_NAME)
         .delete()
@@ -207,6 +285,16 @@ async function channelSubscriptionExists(guildId, channelId) {
         }).catch(err => {
             return false;
         });
+}
+
+function draftSlot(pick) {
+    let num = pick.draft_slot
+    if(pick.round % 2 == 0) {
+        num = 11-pick.draft_slot
+    }
+    num = num.toString();
+    while (num.length < 2) num = "0" + num;
+    return num;
 }
 
 //TODO - add slash command ("add sleeper league subscription") rather than !add-sub
