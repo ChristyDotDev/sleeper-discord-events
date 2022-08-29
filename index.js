@@ -87,6 +87,9 @@ async function checkTransactions() {
         const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
+        if(!channel){
+            return;
+        }
         console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
         if(nflWeek > 1){
@@ -123,6 +126,9 @@ async function checkDraftPicks() {
         const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
+        if(!channel){
+            return;
+        }
         //TODO - get team/player names
         const picks = await axios.get(`https://api.sleeper.app/v1/draft/${sub.draft_id}/picks`)
         const newPicks = picks.data.slice(sub.latest)
