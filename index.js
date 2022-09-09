@@ -91,6 +91,7 @@ async function checkTransactions() {
                 c.type == 'text' &&
                 c.id == sub.channel);
             if(!channel){
+                console.log("No channel")
                 return;
             }
 
@@ -128,10 +129,11 @@ async function checkTransactions() {
                 })
             }
             console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
+            const updatedSub = await updateSub(sub, epochMillis);
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
-        const updatedSub = await updateSub(sub, epochMillis);
+        
     });
 };
 
