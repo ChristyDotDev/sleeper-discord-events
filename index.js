@@ -13,7 +13,7 @@ client.on('ready', async () => {
     console.log('The Bot is ready!');
     setInterval(function(){ // repeat this every 2 minutes
         checkTransactions();
-    }, 1000 * 60 * 2 )
+    }, 10000 )
 });
 
 client.on('message', async (msg) => {
@@ -54,10 +54,12 @@ async function checkTransactions() {
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
     subs.data.forEach(async sub => {
-        const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
+        console.log(sub);
+        const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
-            c.id == sub.channel);
+            c.id == sub.channel)
         console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
+        console.log(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`);
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
         if(nflWeek > 1){
             const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
@@ -69,23 +71,25 @@ async function checkTransactions() {
             const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
             newTxns.forEach(async txn => {
                 const players = await playersResponse
-                if(txn.type=='trade'){
+                console.log(txn);
+
+                if(txn.type=='trade' && txn.adds){
                     const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
                     await channel.send(tradeMessage);          
                 }
-                if(txn.type=='waiver' || txn.type=='free_agent'){
+                if((txn.type=='waiver' || txn.type=='free_agent')  && txn.adds){
                     const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
                     await channel.send(pickupMessage);          
                 }
             })
         }
-        const updatedSub = await updateSub(sub, epochMillis);
+        const updatedSub = await updateSub(sub, 0);
         console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
     });
 };
 
 async function updateSub(sub, epochMillis){
-    return await supabase.from(process.env.SUBS_TABLE_NAME)
+    return supabase.from(process.env.SUBS_TABLE_NAME)
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
@@ -106,6 +110,7 @@ function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
     const stringParts = [`__**${txn_type}**__\n**${username}**`];
     if(txn.adds){
         for (const [playerId, rosterId] of Object.entries(txn.adds)) {
+            console.log(playerId)
             const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
             pickups.push(`+ ${playerName}`);
         }
