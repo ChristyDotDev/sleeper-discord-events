@@ -13,12 +13,8 @@ client.on('ready', async () => {
     console.log('The Bot is ready!');
     setInterval(function(){ // repeat this every 2 minutes
         checkTransactions();
-<<<<<<< HEAD
-    }, 10000 )
-=======
         checkDraftPicks();
     }, 1000 * 60 * 2 )
->>>>>>> c6f591521ddfec6c0d51251412b12e27e2126309
 });
 
 client.on('message', async (msg) => {
