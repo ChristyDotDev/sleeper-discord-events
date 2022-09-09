@@ -118,7 +118,7 @@ async function checkTransactions() {
                             console.log(`ERROR SENDING MESSAGE: ${tradeMessage} to ${channel}; ${e}`);
                         }
                     }
-                    if((txn.type=='waiver' || txn.type=='free_agent')  && txn.adds){
+                    if(txn.type=='waiver' || txn.type=='free_agent'){
                         const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
                         try{
                             await channel.send(pickupMessage);          
