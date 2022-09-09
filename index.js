@@ -127,11 +127,11 @@ async function checkTransactions() {
                     }
                 })
             }
-            const updatedSub = await updateSub(sub, 0);
             console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
+        const updatedSub = await updateSub(sub, 0);
     });
 };
 
