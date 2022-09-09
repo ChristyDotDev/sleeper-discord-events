@@ -128,8 +128,8 @@ async function checkTransactions() {
                     }
                 })
             }
-            console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
             const updatedSub = await updateSub(sub, epochMillis);
+            console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
