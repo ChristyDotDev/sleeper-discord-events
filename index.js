@@ -87,14 +87,11 @@ async function checkTransactions() {
         console.log(sub);
         const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
-<<<<<<< HEAD
-            c.id == sub.channel)
-=======
             c.id == sub.channel);
         if(!channel){
             return;
         }
->>>>>>> c6f591521ddfec6c0d51251412b12e27e2126309
+
         console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
         console.log(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`);
         const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
