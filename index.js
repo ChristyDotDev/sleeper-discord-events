@@ -11,6 +11,7 @@ const playersResponse = axios.get("https://api.sleeper.app/v1/players/nfl").then
 client.login(process.env.BOT_TOKEN);
 client.on('ready', async () => {
     console.log('The Bot is ready!');
+    checkTransactions();
     setInterval(function(){ // repeat this every 2 minutes
         checkTransactions();
         checkDraftPicks();
@@ -232,7 +233,8 @@ function getUsernameForRosterId( rosters, users, rosterId){
     const user = users.find(u => {
         return u.user_id == roster.owner_id
     });
-    return user.display_name;
+    const username = user?.display_name;
+    return username || "Unknown"
 }
 
 async function saveSubscription(guildId, channelId, leagueId) {
