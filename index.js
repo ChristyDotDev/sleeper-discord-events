@@ -131,7 +131,7 @@ async function checkTransactions() {
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
-        const updatedSub = await updateSub(sub, 0);
+        const updatedSub = await updateSub(sub, epochMillis);
     });
 };
 
