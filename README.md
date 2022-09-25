@@ -10,10 +10,6 @@ For now, the notification is quite a simple text message. An Example of a drop m
 
 I'm hoping to prettify them a bit later
 
-## Hosting Costs
-
-I'm not planning to charge for this bot but if you enjoy it, any donations towards hosting fees are always appreciated. [I've set up a Kofi](https://ko-fi.com/christyc92).
-
 ## Known Issues
 
 Please check the Issues tab in github to see known issues or raise new ones
