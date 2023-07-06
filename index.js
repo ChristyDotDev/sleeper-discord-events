@@ -196,14 +196,14 @@ function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
         for (const [playerId, rosterId] of Object.entries(txn.adds)) {
             console.log(playerId)
             const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
-            pickups.push(`+ ${playerName}`);
+            pickups.push(`+${playerName}`);
         }
         stringParts.push(pickups.join('\n'));
     }
     if(txn.drops){
         for (const [playerId, rosterId] of Object.entries(txn.drops)) {
             const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
-            drops.push(`- ${playerName}`);
+            drops.push(`-${playerName}`);
         }
         stringParts.push(drops.join('\n'));
     }
