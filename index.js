@@ -85,7 +85,6 @@ async function checkTransactions() {
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
     subs.data.forEach(async sub => {
-        console.log(sub);
         try{
             const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
                 c.type == 'text' &&
@@ -166,7 +165,6 @@ async function updateSub(sub, epochMillis){
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
-            console.log(r);
             return r;
         })
         .catch(err => {
@@ -180,7 +178,6 @@ async function updateDraftSub(sub, latest){
         .update({latest: latest})
         .match({guild: sub.guild, channel: sub.channel, draft_id: sub.draft_id})
         .then(r => {
-            console.log(r);
             return r;
         })
         .catch(err => {
@@ -272,7 +269,6 @@ async function saveDraftSubscription(guildId, channelId, draftId, latestPick) {
         .upsert([
             { guild: guildId, channel: channelId, draft_id: draftId, latest: latestPick }
         ]).then(dbRes => {
-            console.log(dbRes)
             return true;
         }).catch(err => {
             msg.channel.send(`Couldn't save subscription to Sleeper league ${leagueId}`);
