@@ -92,6 +92,7 @@ async function checkTransactions() {
                 c.id == sub.channel);
             if(!channel){
                 console.log("No channel")
+                //TODO - remove sub on this
                 return;
             }
 
