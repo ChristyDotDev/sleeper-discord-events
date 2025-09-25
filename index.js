@@ -78,9 +78,9 @@ client.on('message', async (msg) => {
 });
 
 async function checkTransactions() {
-    //const nflInfo = await axios.get('https://api.sleeper.app/v1/state/nfl')
-    //const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 0;
-    const nflWeek = 1; //TODO - hardocded for now
+    const nflInfo = await axios.get('https://api.sleeper.app/v1/state/nfl')
+    const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 0;
+    //const nflWeek = 1; //TODO - hardocded for now
     const epochMillis = Math.round(Date.now());
     
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
