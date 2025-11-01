@@ -92,7 +92,7 @@ async function checkTransactions() {
                 c.id == sub.channel);
             if(!channel){
                 console.log("No channel found for league {} with guild {}", sub.league_id, sub.guild);
-                await deleteSub(sub);
+                //await deleteSub(sub);
                 return;
             }
 
