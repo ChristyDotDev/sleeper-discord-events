@@ -17,7 +17,7 @@ client.on('ready', async () => {
     setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 2 ) // repeat this every 2 minutes
+    }, 1000 * 60 * 3 ) // repeat this every 3 minutes
 });
 
 client.on('message', async (msg) => {
@@ -106,7 +106,9 @@ async function checkTransactions() {
             const epochMillis = Math.round(Date.now());
 
             const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
+            console.log(`Total transactions fetched: ${txns.data.length}; New transactions since last check: ${newTxns.length} for league ${sub.league_id}`);
             if(newTxns.length > 0){
+                console.log(`Found ${newTxns.length} new transactions for league ${sub.league_id}`);
                 const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
                 const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
                 newTxns.forEach(async txn => {
