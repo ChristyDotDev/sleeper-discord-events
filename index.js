@@ -12,10 +12,12 @@ client.login(process.env.BOT_TOKEN);
 client.on('ready', async () => {
     console.log('The Bot is ready!');
     checkTransactions();
-    setInterval(function(){ // repeat this every 2 minutes
+    checkDraftPicks();
+
+    setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 2 )
+    }, 1000 * 60 * 2 ) // repeat this every 2 minutes
 });
 
 client.on('message', async (msg) => {
@@ -79,20 +81,18 @@ client.on('message', async (msg) => {
 
 async function checkTransactions() {
     const nflInfo = await axios.get('https://api.sleeper.app/v1/state/nfl')
-    const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 0;
-    //const nflWeek = 1; //TODO - hardocded for now
-    const epochMillis = Math.round(Date.now());
-    
+    const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 1;
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
+    console.log(`Checking ${subs.data.length} subscriptions`);
     subs.data.forEach(async sub => {
-        try{
+        try {
             const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
                 c.type == 'text' &&
                 c.id == sub.channel);
             if(!channel){
-                console.log("No channel")
-                //TODO - remove sub on this
+                console.log("No channel found for league {} with guild {}", sub.league_id, sub.guild);
+                await deleteSub(sub);
                 return;
             }
 
@@ -103,6 +103,8 @@ async function checkTransactions() {
                 const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
                 txns.data = txns.data.concat(prevWeekTxns.data);
             }
+            const epochMillis = Math.round(Date.now());
+
             const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
             if(newTxns.length > 0){
                 const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
@@ -143,6 +145,11 @@ async function checkDraftPicks() {
     
     const subs = await supabase.from(process.env.DRAFT_TABLE_NAME)
         .select();
+    if(subs.data == null || subs.data.length == 0){
+        console.log("No draft subscriptions found");
+        return;
+    }
+    console.log(`Checking ${subs.data.length} draft subscriptions`);
     subs.data.forEach(async sub => {
         const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
@@ -167,6 +174,20 @@ async function updateSub(sub, epochMillis){
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
+            return r;
+        })
+        .catch(err => {
+            console.log(err);
+            throw err;
+        });
+}
+
+async function deleteSub(sub){
+    return supabase.from(process.env.SUBS_TABLE_NAME)
+        .delete()
+        .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
+        .then(r => {
+            console.log(`Deleted subscription for league ${sub.league_id} in guild ${sub.guild}`);
             return r;
         })
         .catch(err => {
