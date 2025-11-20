@@ -17,7 +17,7 @@ client.on('ready', async () => {
     setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 3 ) // repeat this every 3 minutes
+    }, 1000 * 60 * 10 ) // repeat this every 10 minutes
 });
 
 client.on('message', async (msg) => {
