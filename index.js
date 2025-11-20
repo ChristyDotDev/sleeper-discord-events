@@ -17,7 +17,7 @@ client.on('ready', async () => {
     setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 10 ) // repeat this every 10 minutes
+    }, 1000 * 60 * 5 ) // repeat this every 5 minutes
 });
 
 client.on('message', async (msg) => {
@@ -46,11 +46,11 @@ client.on('message', async (msg) => {
     });
   } else if (msg.content == ("!sleeper-unsubscribe")){
     removeSubscription(msg.channel.guild.id, msg.channel.id);
-    msg.channel.send(`Unsubscribed`);
+    await msg.channel.send(`Unsubscribed`);
   } else if (msg.content.startsWith("!draft-subscribe")){
     const parts = msg.content.split(" ");
     if(parts.length != 2){
-      msg.channel.send("Usage: `!draft-subscribe 123` where 123 is the Sleeper Draft ID");
+      await msg.channel.send("Usage: `!draft-subscribe 123` where 123 is the Sleeper Draft ID");
       return;
     }
     //TODO -validations
@@ -85,7 +85,7 @@ async function checkTransactions() {
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
     console.log(`Checking ${subs.data.length} subscriptions`);
-    subs.data.forEach(async sub => {
+    await subs.data.forEach(async sub => {
         try {
             const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
                 c.type == 'text' &&
@@ -138,8 +138,8 @@ async function checkTransactions() {
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
-        
     });
+    console.log("finished checking all subscriptions");
 };
 
 async function checkDraftPicks() {
