@@ -17,7 +17,7 @@ client.on('ready', async () => {
     setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 3 ) // repeat this every 3 minutes
+    }, 1000 * 60 * 10 ) // repeat this every 10 minutes
 });
 
 client.on('message', async (msg) => {
@@ -98,12 +98,14 @@ async function checkTransactions() {
 
             console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
             console.log(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`);
+            const epochMillis = Date.now();
+            console.log(`Fetching transactions for league ${sub.league_id} for week ${nflWeek}, epochMillis: ${epochMillis}`);
             const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
             if(nflWeek > 1){
                 const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
                 txns.data = txns.data.concat(prevWeekTxns.data);
+                txns.data.sort((a,b) => b.status_updated - a.status_updated);
             }
-            const epochMillis = Math.round(Date.now());
 
             const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
             console.log(`Total transactions fetched: ${txns.data.length}; New transactions since last check: ${newTxns.length} for league ${sub.league_id}`);
@@ -111,7 +113,7 @@ async function checkTransactions() {
                 console.log(`Found ${newTxns.length} new transactions for league ${sub.league_id}`);
                 const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
                 const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
-                newTxns.forEach(async txn => {
+                for (const txn of newTxns) {
                     const players = await playersResponse
                     console.log(txn);
 
@@ -123,7 +125,7 @@ async function checkTransactions() {
                             console.log(`ERROR SENDING MESSAGE: ${tradeMessage} to ${channel}; ${e}`);
                         }
                     }
-                    if(txn.type=='waiver' || txn.type=='free_agent'){
+                    if(txn.type=='waiver' || txn.type=='free_agent' || txn.type=='commissioner'){
                         const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
                         try{
                             await channel.send(pickupMessage);          
@@ -131,19 +133,20 @@ async function checkTransactions() {
                             console.log(`ERROR SENDING MESSAGE: ${pickupMessage} to ${channel}; ${e}`);
                         }      
                     }
-                })
+                }
             }
             const updatedSub = await updateSub(sub, epochMillis);
             console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
+        return;
     });
     console.log("finished checking all subscriptions");
 };
 
 async function checkDraftPicks() {
-    const epochMillis = Math.round(Date.now());
+    const epochMillis = Date.now();
     
     const subs = await supabase.from(process.env.DRAFT_TABLE_NAME)
         .select();
@@ -152,7 +155,7 @@ async function checkDraftPicks() {
         return;
     }
     console.log(`Checking ${subs.data.length} draft subscriptions`);
-    subs.data.forEach(async sub => {
+    for (const sub of subs.data) {
         const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
@@ -163,16 +166,16 @@ async function checkDraftPicks() {
         const picks = await axios.get(`https://api.sleeper.app/v1/draft/${sub.draft_id}/picks`)
         const newPicks = picks.data.slice(sub.latest)
         console.log(newPicks)
-        newPicks.forEach(async pick => {
+        for (const pick of newPicks) {
             const pickMessage = pick.round + "." + draftSlot(pick) + ": " +pick.metadata.first_name + " " + pick.metadata.last_name;
             await channel.send(pickMessage); 
             await updateDraftSub(sub, pick.pick_no)
-        });
-    });
+        };
+    };
 };
 
 async function updateSub(sub, epochMillis){
-    return supabase.from(process.env.SUBS_TABLE_NAME)
+    return await supabase.from(process.env.SUBS_TABLE_NAME)
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
@@ -185,7 +188,7 @@ async function updateSub(sub, epochMillis){
 }
 
 async function deleteSub(sub){
-    return supabase.from(process.env.SUBS_TABLE_NAME)
+    return await supabase.from(process.env.SUBS_TABLE_NAME)
         .delete()
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
@@ -276,7 +279,7 @@ function getUsernameForRosterId( rosters, users, rosterId){
 async function saveSubscription(guildId, channelId, leagueId) {
     const exists = await subscriptionExists(guildId, channelId, leagueId);
     if (!exists) {
-        const epochMillis = Math.round(Date.now());
+        const epochMillis = Date.now();
         supabase.from(process.env.SUBS_TABLE_NAME)
             .insert([
                 { guild: guildId, channel: channelId, league_id: leagueId, latest: epochMillis }
