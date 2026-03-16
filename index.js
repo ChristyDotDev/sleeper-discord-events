@@ -96,7 +96,7 @@ async function checkTransactions() {
             const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
             txns.data = txns.data.concat(prevWeekTxns.data);
         }
-        const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
+        const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated >= sub.latest);
         if(newTxns.length > 0){
             const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
             const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
@@ -111,9 +111,12 @@ async function checkTransactions() {
                     await channel.send(pickupMessage);          
                 }
             })
+            const maxStatusUpdated = newTxns.reduce((max, txn) => {
+                return txn.status_updated > max ? txn.status_updated : max;
+            }, sub.latest);
+            const updatedSub = await updateSub(sub, maxStatusUpdated);
+            console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
         }
-        const updatedSub = await updateSub(sub, epochMillis);
-        console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
     });
 };
 
