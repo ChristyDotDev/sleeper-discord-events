@@ -113,7 +113,7 @@ async function checkTransactions() {
                 txns.data.sort((a,b) => b.status_updated - a.status_updated);
             }
 
-            const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated >= sub.latest);
+            const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
             console.log(`Total transactions fetched: ${txns.data.length}; New transactions since last check: ${newTxns.length} for league ${sub.league_id}`);
             if(newTxns.length > 0){
                 console.log(`Found ${newTxns.length} new transactions for league ${sub.league_id}`);
