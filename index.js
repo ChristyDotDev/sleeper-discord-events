@@ -11,10 +11,13 @@ const playersResponse = axios.get("https://api.sleeper.app/v1/players/nfl").then
 client.login(process.env.BOT_TOKEN);
 client.on('ready', async () => {
     console.log('The Bot is ready!');
-    setInterval(function(){ // repeat this every 2 minutes
+    checkTransactions();
+    checkDraftPicks();
+
+    setInterval(function(){ 
         checkTransactions();
         checkDraftPicks();
-    }, 1000 * 60 * 2 )
+    }, 1000 * 60 * 3 ) // repeat this every 3 minutes
 });
 
 client.on('message', async (msg) => {
@@ -43,11 +46,11 @@ client.on('message', async (msg) => {
     });
   } else if (msg.content == ("!sleeper-unsubscribe")){
     removeSubscription(msg.channel.guild.id, msg.channel.id);
-    msg.channel.send(`Unsubscribed`);
+    await msg.channel.send(`Unsubscribed`);
   } else if (msg.content.startsWith("!draft-subscribe")){
     const parts = msg.content.split(" ");
     if(parts.length != 2){
-      msg.channel.send("Usage: `!draft-subscribe 123` where 123 is the Sleeper Draft ID");
+      await msg.channel.send("Usage: `!draft-subscribe 123` where 123 is the Sleeper Draft ID");
       return;
     }
     //TODO -validations
@@ -79,53 +82,80 @@ client.on('message', async (msg) => {
 async function checkTransactions() {
     const nflInfo = await axios.get('https://api.sleeper.app/v1/state/nfl')
     const nflWeek = nflInfo.data.leg > 0 ? nflInfo.data.leg : 1;
-    const epochMillis = Math.round(Date.now());
-    
     const subs = await supabase.from(process.env.SUBS_TABLE_NAME)
         .select();
-    subs.data.forEach(async sub => {
-        const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
-            c.type == 'text' &&
-            c.id == sub.channel);
-        if(!channel){
-            return;
-        }
-        console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
-        const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
-        if(nflWeek > 1){
-            const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
-            txns.data = txns.data.concat(prevWeekTxns.data);
-        }
-        const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated >= sub.latest);
-        if(newTxns.length > 0){
-            const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
-            const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
-            newTxns.forEach(async txn => {
-                const players = await playersResponse
-                if(txn.type=='trade'){
-                    const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
-                    await channel.send(tradeMessage);          
+    console.log(`Checking ${subs.data.length} subscriptions`);
+    await subs.data.forEach(async sub => {
+        try {
+            const channel = await client.channels.cache.find(c => c.guild.id == sub.guild &&
+                c.type == 'text' &&
+                c.id == sub.channel);
+            if(!channel){
+                console.log("No channel found for league {} with guild {}", sub.league_id, sub.guild);
+                //await deleteSub(sub);
+                return;
+            }
+
+            console.log(`Checking subscription for league: ${sub.league_id} for week ${nflWeek}`);
+            console.log(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`);
+            const epochMillis = Date.now();
+            console.log(`Fetching transactions for league ${sub.league_id} for week ${nflWeek}, epochMillis: ${epochMillis}`);
+            const txns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek}`)
+            if(nflWeek > 1){
+                const prevWeekTxns = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/transactions/${nflWeek-1}`)
+                txns.data = txns.data.concat(prevWeekTxns.data);
+                txns.data.sort((a,b) => b.status_updated - a.status_updated);
+            }
+
+            const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
+            console.log(`Total transactions fetched: ${txns.data.length}; New transactions since last check: ${newTxns.length} for league ${sub.league_id}`);
+            if(newTxns.length > 0){
+                console.log(`Found ${newTxns.length} new transactions for league ${sub.league_id}`);
+                const leagueRosters = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/rosters`).then(r => r.data);
+                const leagueUsers = await axios.get(`https://api.sleeper.app/v1/league/${sub.league_id}/users`).then(r => r.data);
+                for (const txn of newTxns) {
+                    const players = await playersResponse
+                    console.log(txn);
+
+                    if(txn.type=='trade' && txn.adds){
+                        const tradeMessage = buildTradeMessage(players, leagueRosters, leagueUsers, txn);
+                        try{
+                            await channel.send(tradeMessage);          
+                        } catch (e){
+                            console.log(`ERROR SENDING MESSAGE: ${tradeMessage} to ${channel}; ${e}`);
+                        }
+                    }
+                    if(txn.type=='waiver' || txn.type=='free_agent' || txn.type=='commissioner'){
+                        const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
+                        try{
+                            await channel.send(pickupMessage);          
+                        } catch (e){
+                            console.log(`ERROR SENDING MESSAGE: ${pickupMessage} to ${channel}; ${e}`);
+                        }      
+                    }
                 }
-                if(txn.type=='waiver' || txn.type=='free_agent'){
-                    const pickupMessage = buildPickupMessage(players, leagueRosters, leagueUsers, txn);
-                    await channel.send(pickupMessage);          
-                }
-            })
-            const maxStatusUpdated = newTxns.reduce((max, txn) => {
-                return txn.status_updated > max ? txn.status_updated : max;
-            }, sub.latest);
-            const updatedSub = await updateSub(sub, maxStatusUpdated);
+            }
+            const updatedSub = await updateSub(sub, epochMillis);
             console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
+        } catch (e){
+            console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
+        return;
     });
+    console.log("finished checking all subscriptions");
 };
 
 async function checkDraftPicks() {
-    const epochMillis = Math.round(Date.now());
+    const epochMillis = Date.now();
     
     const subs = await supabase.from(process.env.DRAFT_TABLE_NAME)
         .select();
-    subs.data.forEach(async sub => {
+    if(subs.data == null || subs.data.length == 0){
+        console.log("No draft subscriptions found");
+        return;
+    }
+    console.log(`Checking ${subs.data.length} draft subscriptions`);
+    for (const sub of subs.data) {
         const channel = client.channels.cache.find(c => c.guild.id == sub.guild &&
             c.type == 'text' &&
             c.id == sub.channel);
@@ -136,12 +166,12 @@ async function checkDraftPicks() {
         const picks = await axios.get(`https://api.sleeper.app/v1/draft/${sub.draft_id}/picks`)
         const newPicks = picks.data.slice(sub.latest)
         console.log(newPicks)
-        newPicks.forEach(async pick => {
+        for (const pick of newPicks) {
             const pickMessage = pick.round + "." + draftSlot(pick) + ": " +pick.metadata.first_name + " " + pick.metadata.last_name;
             await channel.send(pickMessage); 
             await updateDraftSub(sub, pick.pick_no)
-        });
-    });
+        };
+    };
 };
 
 async function updateSub(sub, epochMillis){
@@ -149,7 +179,20 @@ async function updateSub(sub, epochMillis){
         .update({latest: epochMillis})
         .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
         .then(r => {
-            console.log(r);
+            return r;
+        })
+        .catch(err => {
+            console.log(err);
+            throw err;
+        });
+}
+
+async function deleteSub(sub){
+    return await supabase.from(process.env.SUBS_TABLE_NAME)
+        .delete()
+        .match({guild: sub.guild, channel: sub.channel, league_id: sub.league_id})
+        .then(r => {
+            console.log(`Deleted subscription for league ${sub.league_id} in guild ${sub.guild}`);
             return r;
         })
         .catch(err => {
@@ -163,7 +206,6 @@ async function updateDraftSub(sub, latest){
         .update({latest: latest})
         .match({guild: sub.guild, channel: sub.channel, draft_id: sub.draft_id})
         .then(r => {
-            console.log(r);
             return r;
         })
         .catch(err => {
@@ -180,15 +222,16 @@ function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
     const stringParts = [`__**${txn_type}**__\n**${username}**`];
     if(txn.adds){
         for (const [playerId, rosterId] of Object.entries(txn.adds)) {
+            console.log(playerId)
             const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
-            pickups.push(`+ ${playerName}`);
+            pickups.push(`+${playerName}`);
         }
         stringParts.push(pickups.join('\n'));
     }
     if(txn.drops){
         for (const [playerId, rosterId] of Object.entries(txn.drops)) {
             const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
-            drops.push(`- ${playerName}`);
+            drops.push(`-${playerName}`);
         }
         stringParts.push(drops.join('\n'));
     }
@@ -197,14 +240,16 @@ function buildPickupMessage(players, leagueRosters, leagueUsers, txn){
 
 function buildTradeMessage(players, leagueRosters, leagueUsers, txn){
     const trade = {}
-    for (const [playerId, rosterId] of Object.entries(txn.adds)) {
-        const username = getUsernameForRosterId(leagueRosters, leagueUsers, rosterId);
-        const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
-        if (!trade[username]){
-            trade[username] = []
+    if(txn.adds){
+        for (const [playerId, rosterId] of Object.entries(txn.adds)) {
+            const username = getUsernameForRosterId(leagueRosters, leagueUsers, rosterId);
+            const playerName = players[playerId].full_name || players[playerId].first_name + " " + players[playerId].last_name
+            if (!trade[username]){
+                trade[username] = []
+            }
+            trade[username].push(`+ ${playerName}`);
         }
-        trade[username].push(`+ ${playerName}`);
-    }   
+    }
     txn.draft_picks.forEach(pick => {
         const username = getUsernameForRosterId(leagueRosters, leagueUsers, pick.owner_id);
         if (!trade[username]){
@@ -227,13 +272,14 @@ function getUsernameForRosterId( rosters, users, rosterId){
     const user = users.find(u => {
         return u.user_id == roster.owner_id
     });
-    return user.display_name;
+    const username = user?.display_name;
+    return username || "Unknown"
 }
 
 async function saveSubscription(guildId, channelId, leagueId) {
     const exists = await subscriptionExists(guildId, channelId, leagueId);
     if (!exists) {
-        const epochMillis = Math.round(Date.now());
+        const epochMillis = Date.now();
         supabase.from(process.env.SUBS_TABLE_NAME)
             .insert([
                 { guild: guildId, channel: channelId, league_id: leagueId, latest: epochMillis }
@@ -251,7 +297,6 @@ async function saveDraftSubscription(guildId, channelId, draftId, latestPick) {
         .upsert([
             { guild: guildId, channel: channelId, draft_id: draftId, latest: latestPick }
         ]).then(dbRes => {
-            console.log(dbRes)
             return true;
         }).catch(err => {
             msg.channel.send(`Couldn't save subscription to Sleeper league ${leagueId}`);

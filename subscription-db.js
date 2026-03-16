@@ -9,7 +9,6 @@ function saveSubscription(league_id, channel_id){
         .insert([
             { channel: channel_id, league_id: league_id }
         ]).then(dbRes => {
-            console.log(dbRes);
             return true;
         }).catch(err => {
             console.log(err)
