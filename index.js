@@ -107,7 +107,7 @@ async function checkTransactions() {
                 txns.data.sort((a,b) => b.status_updated - a.status_updated);
             }
 
-            const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated > sub.latest);
+            const newTxns = txns.data.filter(txn => txn.status == 'complete' && txn.status_updated >= sub.latest);
             console.log(`Total transactions fetched: ${txns.data.length}; New transactions since last check: ${newTxns.length} for league ${sub.league_id}`);
             if(newTxns.length > 0){
                 console.log(`Found ${newTxns.length} new transactions for league ${sub.league_id}`);
@@ -134,9 +134,12 @@ async function checkTransactions() {
                         }      
                     }
                 }
+                const maxStatusUpdated = newTxns.reduce((max, txn) => {
+                    return txn.status_updated > max ? txn.status_updated : max;
+                }, sub.latest);
+                const updatedSub = await updateSub(sub, maxStatusUpdated);
+                console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
             }
-            const updatedSub = await updateSub(sub, epochMillis);
-            console.log(`Finished checking subscription for league: ${updatedSub.data[0].league_id}`)
         } catch (e){
             console.log(`ERROR WITH LEAGUE: ${sub.league_id}; ${sub}; ${e}`);
         }
